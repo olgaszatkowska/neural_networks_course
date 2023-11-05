@@ -87,7 +87,7 @@ class BaseNeuralNetwork:
     def __str__(self):
         value = ""
         for layer, activation_fn in zip(self.layers, self.activation_fns):
-            value += f"{layer} -> {activation_fn}\n"
+            value += f"{layer} -> {activation_fn} {layer.weights.shape} \n"
 
         return value
 

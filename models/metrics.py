@@ -5,6 +5,12 @@ from numpy.typing import NDArray
 class Loss:
     def __init__(self):
         self.d_inputs = np.array([])
+        
+    def calculate(self, values: NDArray, expected: NDArray) -> float:
+        sample = self.forward(values, expected)
+        data_loss = np.mean(sample)
+
+        return data_loss
 
     def forward(self, values: NDArray, expected: NDArray) -> NDArray:
         raise NotImplemented
@@ -16,12 +22,6 @@ class Loss:
 class CategoricalCrossEntropyLoss(Loss):
     # From Neural Networks from Scratch in Python
     # For classification
-    def calculate(self, values: NDArray, expected: NDArray) -> float:
-        sample = self.forward(values, expected)
-        data_loss = np.mean(sample)
-
-        return data_loss
-
     def forward(self, values: NDArray, expected: NDArray) -> NDArray:
         clipped_values = np.clip(values, 1e-7, 1 - 1e-7)
 
