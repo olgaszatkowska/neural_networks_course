@@ -49,6 +49,7 @@ def generate_forest_fires_files() -> list[str]:
     df = df.astype(float)
 
     df_y = df[[area_header]]
+    # Normalize the outputs
     df_y = df_y / df_y.max()
     df_y.to_csv(FOREST_FIRES_PROCESSED_FILE_y, header=None, index=False)
 
