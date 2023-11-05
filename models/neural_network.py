@@ -8,7 +8,6 @@ from models.activation_functions import ActivationFunction, SoftMax, ReLU, Sigmo
 class BaseNeuralNetwork:
     def __init__(
         self,
-        *,
         input_dim: int,
         hidden_dim: int,
         output_dim: int,
@@ -19,11 +18,9 @@ class BaseNeuralNetwork:
         self.output_dim = output_dim
 
         self.number_of_hidden_layers = number_of_hidden_layers
-
-        self.layers = self._create_layers(*self._layers())
-        self.activation_fns = self._create_activation_functions(
-            *self._activation_functions()
-        )
+        
+        self.layers = []
+        self.activation_fns = []
 
     def forward(self, inputs: NDArray) -> NDArray:
         vector = inputs
@@ -48,7 +45,7 @@ class BaseNeuralNetwork:
 
             gradient = layer.d_inputs
 
-    def _create_layers(self, *initializers: list[Initializer]):
+    def add_layers(self, *initializers: list[Initializer]):
         input_init, hidden_init, output_init, *_ = initializers
         layers = [
             DenseLayer(self.input_dim, self.hidden_dim, weights_initializer=input_init)
@@ -66,9 +63,9 @@ class BaseNeuralNetwork:
             )
         )
 
-        return layers
+        self.layers = layers
 
-    def _create_activation_functions(self, *functions: list[ActivationFunction]):
+    def add_activation_fns(self, *functions: list[ActivationFunction]):
         input_fn, hidden_fn, output_fn, *_ = functions
 
         fns = [input_fn]
@@ -78,7 +75,7 @@ class BaseNeuralNetwork:
 
         fns.append(output_fn)
 
-        return fns
+        self.activation_fns = fns
 
     def __str__(self):
         value = ""
@@ -87,24 +84,28 @@ class BaseNeuralNetwork:
 
         return value
 
-    def _layers(self):
-        raise NotImplemented
 
-    def _activation_functions(self):
-        raise NotImplemented
+def get_classification_network(
+    input_dim: int,
+    hidden_dim: int,
+    output_dim: int,
+    number_of_hidden_layers: int,
+):
+    nn = BaseNeuralNetwork(input_dim, hidden_dim, output_dim, number_of_hidden_layers)
+    nn.add_layers(RandomInitializer, XavierInitializer, RandomInitializer)
+    nn.add_activation_fns(ReLU(), ReLU(), SoftMax())
+    
+    return nn
 
 
-class ClassificationNeuralNetwork(BaseNeuralNetwork):
-    def _layers(self) -> list:
-        return RandomInitializer, XavierInitializer, RandomInitializer
-
-    def _activation_functions(self):
-        return ReLU(), ReLU(), SoftMax()
-
-
-class RegressionNeuralNetwork(BaseNeuralNetwork):
-    def _layers(self) -> list:
-        return RandomInitializer, XavierInitializer, RandomInitializer
-
-    def _activation_functions(self):
-        return ReLU(), ReLU(), Sigmoid()
+def get_regression_network(
+    input_dim: int,
+    hidden_dim: int,
+    output_dim: int,
+    number_of_hidden_layers: int,
+):
+    nn = BaseNeuralNetwork(input_dim, hidden_dim, output_dim, number_of_hidden_layers)
+    nn.add_layers(RandomInitializer, XavierInitializer, RandomInitializer)
+    nn.add_activation_fns(ReLU(), ReLU(), Sigmoid())
+    
+    return nn
