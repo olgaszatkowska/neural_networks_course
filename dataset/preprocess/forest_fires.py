@@ -2,7 +2,7 @@ import pandas as pd
 from pandas.core.series import Series
 import scipy.io as sio
 
-from preprocess.paths import (
+from dataset.preprocess.paths import (
     FOREST_FIRES_RAW_FILE,
     FOREST_FIRES_PROCESSED_FILE_X,
     FOREST_FIRES_PROCESSED_FILE_y,

@@ -4,7 +4,7 @@ import scipy
 from scipy.io.matlab import loadmat
 from numpy.typing import NDArray
 
-from preprocess.paths import AFFNIST_RAW_DIR
+from dataset.preprocess.paths import AFFNIST_RAW_DIR
 
 
 def load_matlab(file: str):
@@ -35,7 +35,7 @@ def load_matlab(file: str):
 
 
 def _path(page: int) -> Path:
-    return Path(__file__).parent.parent / f"{AFFNIST_RAW_DIR}{page}.mat"
+    return Path(__file__).parent.parent.parent / f"{AFFNIST_RAW_DIR}{page}.mat"
 
 
 def load_affnist(page: int | list[int]) -> tuple[NDArray, NDArray]:

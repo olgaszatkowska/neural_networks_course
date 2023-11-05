@@ -11,7 +11,6 @@ class Optimizer:
         self,
         network: BaseNeuralNetwork,
         loss: Loss,
-        
         learning_rate: float,
         batch_size: int,
         epochs: int,
@@ -25,12 +24,12 @@ class Optimizer:
 
         self.accuracy_fn = accuracy
         self.loss_fn = loss
-        
+
         self.accuracy = []
         self.loss = []
-        
+
         self.reshape = reshape
-        
+
         self.count_accuracy = accuracy != None
 
     def fit(self, x: NDArray, y: NDArray):
@@ -52,17 +51,17 @@ class Optimizer:
                 acc = self.accuracy_fn.calculate(predictions, y_window)
 
             loss = self.loss_fn.calculate(predictions, y_window)
-            
+
             batch_acc.append(acc)
             batch_loss.append(loss)
 
             self._backward(predictions, y_window)
-            
+
         avg_acc = np.average(batch_acc)
         avg_loss = np.average(batch_loss)
-        
+
         self._append_metrics(avg_acc, avg_loss)
-        
+
         return avg_acc, avg_loss
 
     def _get_window(self, batch_no: int, x: NDArray, y: NDArray):
@@ -70,7 +69,7 @@ class Optimizer:
         end_idx = start_idx + self.batch_size
 
         y_window = y[start_idx:end_idx]
-        
+
         if self.reshape:
             return x[start_idx:end_idx], y_window.reshape(-1, 1)
 
@@ -86,7 +85,7 @@ class Optimizer:
     def _append_metrics(self, acc: float, loss: float):
         self.accuracy.append(acc)
         self.loss.append(loss)
-        
+
     def _print_metrics(self, epoch: int, acc: float, loss: float) -> None:
         acc_str = f"accuracy {acc:.3f} -" if self.count_accuracy else ""
         print(f"Epoch {epoch}  -- {acc_str} loss {loss:.3f}")

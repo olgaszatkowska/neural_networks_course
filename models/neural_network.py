@@ -20,8 +20,10 @@ class BaseNeuralNetwork:
 
         self.number_of_hidden_layers = number_of_hidden_layers
 
-        self.layers = self._layers()
-        self.activation_fns = self._activation_functions()
+        self.layers = self._create_layers(*self._layers())
+        self.activation_fns = self._create_activation_functions(
+            *self._activation_functions()
+        )
 
     def forward(self, inputs: NDArray) -> NDArray:
         vector = inputs
@@ -46,9 +48,6 @@ class BaseNeuralNetwork:
 
             gradient = layer.d_inputs
 
-    def _layers(self):
-        raise NotImplemented
-
     def _create_layers(self, *initializers: list[Initializer]):
         input_init, hidden_init, output_init, *_ = initializers
         layers = [
@@ -69,9 +68,6 @@ class BaseNeuralNetwork:
 
         return layers
 
-    def _activation_functions(self):
-        raise NotImplemented
-
     def _create_activation_functions(self, *functions: list[ActivationFunction]):
         input_fn, hidden_fn, output_fn, *_ = functions
 
@@ -91,22 +87,24 @@ class BaseNeuralNetwork:
 
         return value
 
+    def _layers(self):
+        raise NotImplemented
+
+    def _activation_functions(self):
+        raise NotImplemented
+
 
 class ClassificationNeuralNetwork(BaseNeuralNetwork):
     def _layers(self) -> list:
-        return self._create_layers(
-            RandomInitializer, XavierInitializer, RandomInitializer
-        )
+        return RandomInitializer, XavierInitializer, RandomInitializer
 
     def _activation_functions(self):
-        return self._create_activation_functions(ReLU(), ReLU(), SoftMax())
+        return ReLU(), ReLU(), SoftMax()
 
 
 class RegressionNeuralNetwork(BaseNeuralNetwork):
     def _layers(self) -> list:
-        return self._create_layers(
-            RandomInitializer, XavierInitializer, RandomInitializer
-        )
+        return RandomInitializer, XavierInitializer, RandomInitializer
 
     def _activation_functions(self):
-        return self._create_activation_functions(ReLU(), ReLU(), Sigmoid())
+        return ReLU(), ReLU(), Sigmoid()

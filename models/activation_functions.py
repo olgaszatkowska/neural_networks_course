@@ -60,7 +60,7 @@ class Sigmoid(ActivationFunction):
         sigmoid_derivative = self.output * (1 - self.output)
         # Compute the gradient of the loss with respect to the input
         d_inputs = d_values * sigmoid_derivative
-        
+
         self.d_inputs = d_inputs
 
 

@@ -3,8 +3,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from numpy.typing import NDArray
 
-from preprocess.forest_fires import generate_forest_fires_files
-from preprocess.affnist import load_affnist
+from dataset.preprocess.forest_fires import generate_forest_fires_files
+from dataset.preprocess.affnist import load_affnist
 
 
 class Dataset:
@@ -16,7 +16,7 @@ class Dataset:
 
     def affnist_dataset(self):
         return self._train_test_split(*load_affnist(page=2))
-    
+
     def _train_test_split(self, df_X: NDArray, df_y: NDArray):
         return train_test_split(df_X, df_y, test_size=0.2, random_state=242)
 

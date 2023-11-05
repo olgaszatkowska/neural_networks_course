@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 class Loss:
     def __init__(self):
         self.d_inputs = np.array([])
-        
+
     def calculate(self, values: NDArray, expected: NDArray) -> float:
         sample = self.forward(values, expected)
         data_loss = np.mean(sample)
