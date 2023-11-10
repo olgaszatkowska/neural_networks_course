@@ -40,4 +40,4 @@ class DenseLayer:
         self.d_inputs = np.dot(d_values, self.weights.T)
 
     def __str__(self):
-        return f"DenseLayer: input {self.input_count}, neurons {self.neurons_count})"
+        return f"DenseLayer: {self.input_count} x {self.neurons_count} -> {self.initializer}"

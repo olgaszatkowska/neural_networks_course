@@ -10,6 +10,9 @@ class Initializer:
 
     def initialize(self):
         pass
+    
+    def __str__(self) -> str:
+        return self.__class__.__name__
 
 
 class RandomInitializer(Initializer):
@@ -28,5 +31,5 @@ class XavierInitializer(Initializer):
     # weights are neither much bigger than 1, nor too much less than 1.
     # Source: https://towardsdatascience.com/weight-initialization-techniques-in-neural-networks-26c649eb3b78
     def initialize(self) -> NDArray:
-        hidden_dim, output_dim = self._shape
-        return np.random.randn(output_dim, hidden_dim) * np.sqrt(1 / hidden_dim)
+        hidden_dim, _ = self._shape
+        return np.random.randn(*self._shape) * np.sqrt(1 / hidden_dim)

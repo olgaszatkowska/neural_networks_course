@@ -55,7 +55,7 @@ class Sigmoid(ActivationFunction):
         self.output = 1 / (1 + np.exp(-inputs))
         return self.output
 
-    def backward(self, d_values: NDArray) -> NDArray:
+    def backward(self, d_values: NDArray):
         # Compute the derivative of the sigmoid function
         sigmoid_derivative = self.output * (1 - self.output)
         # Compute the gradient of the loss with respect to the input
@@ -71,4 +71,3 @@ class Linear(ActivationFunction):
 
     def backward(self, d_values: NDArray) -> NDArray:
         self.d_inputs = d_values.copy()
-        self.d_inputs = NDArray
