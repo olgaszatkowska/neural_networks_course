@@ -1,6 +1,7 @@
 from typing import Optional
 from numpy.typing import NDArray
 import numpy as np
+import copy
 
 from models.neural_network import BaseNeuralNetwork
 from models.metrics import Loss, Accuracy
@@ -16,6 +17,7 @@ class Optimizer:
         epochs: int,
         reshape: bool = False,
         accuracy: Optional[Accuracy] = None,
+        early_stopping: bool = False,
     ):
         self.network = network
         self.learning_rate = learning_rate
@@ -27,17 +29,41 @@ class Optimizer:
 
         self.accuracy = []
         self.loss = []
+        self.validation_loss = []
 
         self.reshape = reshape
 
         self.count_accuracy = accuracy != None
+        self.early_stopping = early_stopping
 
-    def fit(self, x: NDArray, y: NDArray):
+    def fit(self, x: NDArray, y: NDArray, x_valid: NDArray = None, y_valid: NDArray = None):
         batch_count = x.shape[0] // self.batch_size
+        validation_loss = None
+        saved_model = None
 
         for epoch in range(self.epochs):
+            if self.early_stopping:
+                saved_model = copy.deepcopy(self.network)
+
             acc, loss = self._fit_batch(x, y, batch_count)
             self._print_metrics(epoch, acc, loss)
+            
+            if not self.early_stopping:
+                continue
+
+            predictions = self.network.forward(x_valid)
+            validation_loss_new = self.loss_fn.calculate(predictions, y_valid)
+            
+            if self.early_stopping and validation_loss != None:
+                self.validation_loss.append(validation_loss_new)
+
+                if (validation_loss_new - validation_loss) > 0:
+                    self.network = saved_model
+                    print(f"Early stopping at {validation_loss_new}")
+                    return
+            
+            validation_loss = validation_loss_new
+                
 
     def _fit_batch(self, x: NDArray, y: NDArray, batch_count: int):
         acc, loss = 0.0, 0.0

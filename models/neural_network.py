@@ -162,7 +162,7 @@ class RegressionNeuralNetwork(PredefinedNeuralNetwork):
             hidden_dim=hidden_dim,
             output_dim=1,
             number_of_hidden_layers=number_of_hidden_layers,
-            activation_fns=[ReLU(), ReLU(), Sigmoid()],
+            activation_fns=[ReLU(), ReLU(), Linear()],
             weight_initializers=[
                 RandomInitializer,
                 XavierInitializer,
