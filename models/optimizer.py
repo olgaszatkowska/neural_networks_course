@@ -5,6 +5,7 @@ import copy
 
 from models.neural_network import BaseNeuralNetwork
 from models.metrics import Loss, Accuracy
+from models.layers import DenseLayer, Conv2D
 
 
 class Optimizer:
@@ -36,7 +37,9 @@ class Optimizer:
         self.count_accuracy = accuracy != None
         self.early_stopping = early_stopping
 
-    def fit(self, x: NDArray, y: NDArray, x_valid: NDArray = None, y_valid: NDArray = None):
+    def fit(
+        self, x: NDArray, y: NDArray, x_valid: NDArray = None, y_valid: NDArray = None
+    ):
         batch_count = x.shape[0] // self.batch_size
         validation_loss = None
         saved_model = None
@@ -47,13 +50,13 @@ class Optimizer:
 
             acc, loss = self._fit_batch(x, y, batch_count)
             self._print_metrics(epoch, acc, loss)
-            
+
             if not self.early_stopping:
                 continue
 
             predictions = self.network.forward(x_valid)
             validation_loss_new = self.loss_fn.calculate(predictions, y_valid)
-            
+
             if self.early_stopping and validation_loss != None:
                 self.validation_loss.append(validation_loss_new)
 
@@ -61,9 +64,8 @@ class Optimizer:
                     self.network = saved_model
                     print(f"Early stopping at {validation_loss_new}")
                     return
-            
+
             validation_loss = validation_loss_new
-                
 
     def _fit_batch(self, x: NDArray, y: NDArray, batch_count: int):
         acc, loss = 0.0, 0.0
@@ -115,3 +117,22 @@ class Optimizer:
     def _print_metrics(self, epoch: int, acc: float, loss: float) -> None:
         acc_str = f"accuracy {acc:.3f} -" if self.count_accuracy else ""
         print(f"Epoch {epoch}  -- {acc_str} loss {loss:.3f}")
+
+
+class ConvolutionOptimizer:
+    def __init__(self, network, *, learning_rate: float):
+        self.network = network
+        self.learning_rate = learning_rate
+        self.loss = []
+
+    def fit(self):
+        for layer in self.network.layers:
+            if isinstance(layer, DenseLayer):
+                layer.weights += -self.learning_rate * layer.d_weights
+                layer.biases += -self.learning_rate * layer.d_bias
+            elif isinstance(layer, Conv2D):
+                layer.kernel += -self.learning_rate * layer.d_weights
+                layer.biases += -self.learning_rate * layer.d_bias
+                
+    def save_loss(self, loss):
+        self.loss.append(loss)
