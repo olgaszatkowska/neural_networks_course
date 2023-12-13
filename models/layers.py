@@ -98,8 +98,6 @@ class Conv2D:
         for kernel_idx, kernel in enumerate(self.kernel):
             self._add_bias(kernel_idx, stride_view, kernel)
 
-        self.output = np.maximum(0, self.output)
-
         return self.output
 
     def _get_forward_stride_view(
@@ -139,7 +137,6 @@ class Conv2D:
         return output_h, output_w
 
     def backward(self, d_values: NDArray) -> None:
-        d_values = d_values * (self.output > 0)
 
         batch_size, input_channels, input_h, input_w = self.input.shape
         _, _, output_h, output_w = d_values.shape
