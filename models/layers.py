@@ -68,6 +68,8 @@ class Conv2D:
         self.input = None
 
     def _get_kernel(self):
+        # initialize n kernels with n channels and given shape
+        # initialize kernel weights with variance approx. 1
         return np.random.randn(
             self.kernel_count, self.in_channels, self.kernel_side, self.kernel_side
         ) * np.sqrt(2.0 / (self.in_channels * self.kernel_side * self.kernel_side))
@@ -76,14 +78,15 @@ class Conv2D:
         self.input = np.pad(
             inputs,
             (
-                (0, 0),
-                (0, 0),
-                (self.padding, self.padding),
-                (self.padding, self.padding),
+                (0, 0), # no padding along first dimension, batch size
+                (0, 0), # no padding along second dimension, number of channels
+                (self.padding, self.padding), # padding added to height
+                (self.padding, self.padding), # padding added to width
             ),
-            mode="constant",
+            mode="constant", # set padding to zero
         )
-        in_strides = self.input.strides
+        # tuple, one value for each dimension, specifying how many bytes to skip in each dimension to move to next element
+        in_strides: tuple = self.input.strides
 
         batch_size, in_channels, input_h, input_w = self.input.shape
 
@@ -95,8 +98,9 @@ class Conv2D:
             batch_size, in_channels, (output_h, output_w), in_strides
         )
 
+        # add bias to each kernel
         for kernel_idx, kernel in enumerate(self.kernel):
-            self._add_bias(kernel_idx, stride_view, kernel)
+            self._apply_conv(kernel_idx, stride_view, kernel)
 
         return self.output
 
@@ -115,33 +119,40 @@ class Conv2D:
         return as_strided(
             self.input,
             shape=stride_shape,
+            # define how window should move
             strides=(
-                *in_strides[:2],
-                in_strides[2] * self.stride,
-                in_strides[3] * self.stride,
-                *in_strides[2:],
+                *in_strides[:2], # preserve existing strides for batch size and input channels
+                in_strides[2] * self.stride, # bytes offset
+                in_strides[3] * self.stride, # bytes offset
+                *in_strides[2:], # preserve kernel sides 
             ),
         )
 
-    def _add_bias(self, kernel_idx, stride_view, kernel):
+    def _apply_conv(self, kernel_idx, stride_view, kernel):
+        # to given kernel apply padding 
+        # perform dot product, over which axis
         self.output[:, kernel_idx, :, :] = np.tensordot(
             stride_view,
             kernel,
-            axes=([1, 4, 5], [0, 1, 2]),
+            axes=(
+                [1, 4, 5], # stride view, channel dimension, height and width
+                [0, 1, 2] # kernel output channel, height, and width
+            ),
         )
 
     def _get_output_shape(self, input_h, input_w):
+        # determine how input will be reduced 
         output_h = math.ceil((input_h - self.kernel_side) / self.stride)
-        output_w = math.ceil(input_w - self.kernel_side / self.stride)
+        output_w = math.ceil((input_w - self.kernel_side) / self.stride)
 
         return output_h, output_w
 
     def backward(self, d_values: NDArray) -> None:
-
         batch_size, input_channels, input_h, input_w = self.input.shape
         _, _, output_h, output_w = d_values.shape
         in_strides = self.input.strides
 
+        # initialize weights, biases and iputs as 0
         self._init_d_as_zeros()
 
         stride_view_kernel = as_strided(
@@ -155,23 +166,29 @@ class Conv2D:
                 self.kernel_side,
             ),
             strides=(
-                *in_strides[:2],
-                in_strides[2] * self.stride,
-                in_strides[3] * self.stride,
-                *in_strides[2:],
+                *in_strides[:2], # preserve existing strides for batch size and input channels
+                in_strides[2] * self.stride, # bytes offset
+                in_strides[3] * self.stride, # bytes offset
+                *in_strides[2:], # preserve kernel sides 
             ),
         )
 
+        # update the gradients with respect to weights and biases for each kernel based on backpropagated gradients 
         for idx in range(self.kernel_count):
+            # extract d_values for given kernel 
             kernel_d_values = d_values[:, idx, :, :].reshape(
-                batch_size, 1, output_h, output_w, 1, 1
+                batch_size, 1, output_h, output_w, 1, 1 # batch size, input channels, h, w, kernel side, kernel side
             )
+            
+            # update the gradients with respect to weights
             self.d_weights[idx] = np.sum(
-                stride_view_kernel * kernel_d_values, axis=(0, 2, 3)
+                stride_view_kernel * kernel_d_values, axis=(0, 2, 3) # perform sum over batch, h, w
             )
+            
+            # update gradients for the bias
             self.d_bias[idx] = np.sum(d_values[:, idx, :, :], axis=(0, 1, 2))
-
-        inv_kernel = self.kernel[:, :, ::-1, ::-1]
+        
+        # add padding to backpropagated gradients with zeros
         d_values_with_pad = np.pad(
             d_values,
             (
@@ -187,18 +204,25 @@ class Conv2D:
         out_stride = self._get_backward_stride_view(
             batch_size, (input_h, input_w), d_values_with_pad, d_values_with_pad_strides
         )
+        
+        # spacially reverse the convolutional kernel
+        # ensure consistency with the forward pass
+        inv_kernel = self.kernel[:, :, ::-1, ::-1]
 
+        # Compute gradients with respect to the input 
         self.d_inputs = np.tensordot(
-            out_stride, inv_kernel, axes=((1, 4, 5), (0, 2, 3))
+            out_stride, inv_kernel, axes=((1, 4, 5), (0, 2, 3)) # input chanel, h, w
         )
 
         has_padding = self.padding != 0
 
+        # Remove padding from the calculated gradients
         if has_padding:
             self.d_inputs = self.d_inputs[
                 :, :, self.padding : -self.padding, self.padding : -self.padding
             ]
 
+        # Adjust the order
         self.d_inputs = self.d_inputs.transpose((0, 3, 1, 2))
 
     def _init_d_as_zeros(self):
@@ -223,10 +247,10 @@ class Conv2D:
             d_values_with_pad,
             shape=stride_shape,
             strides=(
-                *d_values_with_pad_strides[:2],
-                d_values_with_pad_strides[2] * self.stride,
-                d_values_with_pad_strides[3] * self.stride,
-                *d_values_with_pad_strides[2:],
+                *d_values_with_pad_strides[:2], # preserve existing strides for batch size and input channels
+                d_values_with_pad_strides[2] * self.stride, # bytes offset
+                d_values_with_pad_strides[3] * self.stride, # bytes offset
+                *d_values_with_pad_strides[2:], # preserve kernel sides 
             ),
         )
 
@@ -269,6 +293,7 @@ class MaxPool2D:
             ),
         )
 
+        # Compute maximum value over height and width
         self.output = np.max(stride_view, axis=(4, 5))
 
         return self.output
@@ -300,6 +325,9 @@ class MaxPool2D:
 
         self.d_inputs = np.zeros_like(self.input)
 
+        # iterate over output spacial dimensions
+        # update d_inputs based on the max indices and coordinates, distributing the backpropagated
+        # error to the locations where the maximum values were originally found during the forward pass.
         for h in range(output_h):
             for w in range(output_w):
                 max_indices = self._get_max_indices(
@@ -309,12 +337,14 @@ class MaxPool2D:
 
                 for batch in range(batch_size):
                     for kernel in range(kernels):
+                        # get the coordinates of the maximum value
                         coord_1 = max_coords[0][batch, kernel]
                         coord_2 = max_coords[1][batch, kernel]
 
                         h_start = h * self.stride
                         w_start = w * self.stride
 
+                        # get the backpropagated error for the current output position
                         local_err = d_values[batch, kernel, h, w]
                         self.d_inputs[
                             batch, kernel, h_start + coord_1, w_start + coord_2
